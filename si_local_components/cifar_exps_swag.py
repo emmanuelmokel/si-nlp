@@ -170,9 +170,9 @@ for epoch in range(start_epoch, args.epochs):
         lr = args.lr_init
     
     if (args.swag and (epoch + 1) > args.swag_start) and args.cov_mat:
-        train_res = utils.train_epoch(loaders['train'], model, criterion, optimizer)
+        train_res = utils.train_epoch(loaders['train'], model, criterion, optimizer, cuda = False)
     else:
-        train_res = utils.train_epoch(loaders['train'], model, criterion, optimizer)
+        train_res = utils.train_epoch(loaders['train'], model, criterion, optimizer, cuda = False)
 
     if epoch == 0 or epoch % args.eval_freq == args.eval_freq - 1 or epoch == args.epochs - 1:
         test_res = utils.eval(loaders['test'], model, criterion)
