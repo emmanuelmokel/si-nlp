@@ -9,7 +9,7 @@ import numpy as np
 
 from torch.distributions import LowRankMultivariateNormal
 from .elliptical_slice import elliptical_slice
-from subspace_inference.utils import unflatten_like, flatten, train_epoch
+from utils import unflatten_like, flatten, train_epoch
 from .proj_model import ProjectedModel
 from .vi_model import VIModel, ELBO
 

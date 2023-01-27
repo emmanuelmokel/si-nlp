@@ -1,5 +1,5 @@
 import torch
-from subspace_inference.utils import unflatten_like
+from utils import unflatten_like
 
 class SubspaceModel(torch.nn.Module):
     def __init__(self, mean, cov_factor):

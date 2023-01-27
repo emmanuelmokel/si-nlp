@@ -1,0 +1,1 @@
+cifar_exps_swag.py --data_path=data --epochs=300 --dataset=CIFAR100 --save_freq=300 --model=VGG16 --lr_init=0.05 --wd=5e4 --swag --swag_start=161 --swag_lr=0.01 --cov_mat --use_test --dir=ckpts/vgg16_run1

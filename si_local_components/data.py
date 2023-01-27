@@ -114,19 +114,19 @@ def loaders(dataset, path, batch_size, num_workers, transform_train, transform_t
         train_set.labels = cls_mapping[train_set.labels]
     else:
         train_set = ds(root=path, train=True, download=True, transform=transform_train)
-        num_classes = max(train_set.train_labels) + 1
+        num_classes = max(train_set.targets) + 1
 
     if use_validation:
         print("Using train (" + str(len(train_set.train_data)-val_size) + ") + validation (" +str(val_size)+ ")")
         train_set.train_data = train_set.train_data[:-val_size]
-        train_set.train_labels = train_set.train_labels[:-val_size]
+        train_set.targets = train_set.targets[:-val_size]
 
         test_set = ds(root=path, train=True, download=True, transform=transform_test)
         test_set.train = False
         test_set.test_data = test_set.train_data[-val_size:]
-        test_set.test_labels = test_set.train_labels[-val_size:]
+        test_set.test_labels = test_set.targets[-val_size:]
         delattr(test_set, 'train_data')
-        delattr(test_set, 'train_labels')
+        delattr(test_set, 'targets')
     else:
         print('You are going to run models on the test set. Are you sure?')
         if dataset == 'STL10':
@@ -141,10 +141,10 @@ def loaders(dataset, path, batch_size, num_workers, transform_train, transform_t
 
         print('Using classes:', end='')
         print(c10_classes[split_classes])
-        train_mask = np.isin(train_set.train_labels, c10_classes[split_classes])
+        train_mask = np.isin(train_set.targets, c10_classes[split_classes])
         train_set.train_data = train_set.train_data[train_mask, :]
-        train_set.train_labels = np.array(train_set.train_labels)[train_mask]
-        train_set.train_labels = np.where(train_set.train_labels[:, None] == c10_classes[split_classes][None, :])[1].tolist()
+        train_set.targets = np.array(train_set.targets)[train_mask]
+        train_set.targets = np.where(train_set.targets[:, None] == c10_classes[split_classes][None, :])[1].tolist()
         print('Train: %d/%d' % (train_set.train_data.shape[0], train_mask.size))
 
         test_mask = np.isin(test_set.test_labels, c10_classes[split_classes])
@@ -180,7 +180,7 @@ def loaders_inc(dataset, path, num_chunks, batch_size, num_workers, transform_tr
     ds = getattr(torchvision.datasets, dataset)
 
     train_set = ds(root=path, train=True, download=True, transform=transform_train)
-    num_classes = int(max(train_set.train_labels)) + 1
+    num_classes = int(max(train_set.targets)) + 1
 
     num_samples = (train_set.train_data.shape[0] - val_size) if use_validation else train_set.train_data.shape[0]
     train_sets = list()
@@ -193,7 +193,7 @@ def loaders_inc(dataset, path, num_chunks, batch_size, num_workers, transform_tr
         chunk_size = (num_samples + i - 1) // i
         tmp_set = ds(root=path, train=True, download=True, transform=transform_train)
         tmp_set.train_data = tmp_set.train_data[order[offset:offset + chunk_size]]
-        tmp_set.train_labels = np.array(tmp_set.train_labels)[order[offset:offset + chunk_size]]
+        tmp_set.targets = np.array(tmp_set.targets)[order[offset:offset + chunk_size]]
 
         train_sets.append(tmp_set)
         offset += chunk_size
@@ -207,9 +207,9 @@ def loaders_inc(dataset, path, num_chunks, batch_size, num_workers, transform_tr
         test_set = ds(root=path, train=True, download=True, transform=transform_test)
         test_set.train = False
         test_set.test_data = test_set.train_data[order[-val_size:]]
-        test_set.test_labels = np.array(test_set.train_labels)[order[-val_size:]]
+        test_set.test_labels = np.array(test_set.targets)[order[-val_size:]]
         delattr(test_set, 'train_data')
-        delattr(test_set, 'train_labels')
+        delattr(test_set, 'targets')
     else:
         print('You are going to run models on the test set. Are you sure?')
 

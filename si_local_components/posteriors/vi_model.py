@@ -1,7 +1,7 @@
 import math
 import torch
-from subspace_inference.utils import extract_parameters, train_epoch
-from subspace_inference.utils import set_weights_old as set_weights
+from utils import extract_parameters, train_epoch
+from utils import set_weights_old as set_weights
 
 
 class VIModel(torch.nn.Module):

@@ -7,7 +7,7 @@ import torch
 import torch.nn.functional as F
 import torchvision
 import numpy as np
-from posteriors import data, losses, utils
+import data, losses, utils
 
 import models
 from posteriors import SWAG

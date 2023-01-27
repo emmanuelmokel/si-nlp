@@ -7,8 +7,8 @@ from pyro.infer.mcmc import NUTS, MCMC
 from pyro.nn import AutoRegressiveNN
 from torch.autograd import Variable
 
-from ...utils import extract_parameters
-from ...utils import set_weights_old as set_weights
+from utils import extract_parameters
+from utils import set_weights_old as set_weights
 
 class PyroModel(torch.nn.Module):
 

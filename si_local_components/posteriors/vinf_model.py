@@ -1,6 +1,6 @@
 import math
 import torch
-from subspace_inference.utils import set_weights
+from utils import set_weights
 
 
 class VINFModel(torch.nn.Module):
