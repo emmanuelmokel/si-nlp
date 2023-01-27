@@ -34,11 +34,17 @@ class SWAG(torch.nn.Module):
         self.base_model.cuda(device=device)
 
     def to(self, *args, **kwargs):
+        #Putting base model onto given device
+        device = torch.device('cpu')
+        self.base_model.to(device)
+        self.model_device = device.type
+        self.subspace.to(device=torch.device('cpu'))
+        """
         self.base_model.to(*args, **kwargs)
         device, dtype, non_blocking = torch._C._nn._parse_to(*args, **kwargs)
         self.model_device = device.type
         self.subspace.to(device=torch.device('cpu'), dtype=dtype, non_blocking=non_blocking)
-
+        """
     def forward(self, *args, **kwargs):
         return self.base_model(*args, **kwargs)
 
