@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 
+from .. import data, losses, utils
 from . import (
     models,
-    posteriors,
-    data,
-    losses,
-    utils, 
+    posteriors, 
 )
 
 __all__ = [

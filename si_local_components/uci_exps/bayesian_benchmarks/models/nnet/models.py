@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
 
-from subspace_inference import utils
+from si_local_components import utils
 from subspace_inference.posteriors.proj_model import SubspaceModel
 from subspace_inference.posteriors import SWAG, EllipticalSliceSampling, BenchmarkVIModel
 from subspace_inference.posteriors import BenchmarkVINFModel

@@ -8,8 +8,9 @@ import copy
 import torch
 
 import numpy as np
+from si_local_components import data, losses, utils
 
-from subspace_inference import data, models, utils, losses
+from subspace_inference import models
 from subspace_inference.posteriors import SWAG
 from subspace_inference.posteriors.proj_model import SubspaceModel
 from subspace_inference.posteriors.elliptical_slice import elliptical_slice

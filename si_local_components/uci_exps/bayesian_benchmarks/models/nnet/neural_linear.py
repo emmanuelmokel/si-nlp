@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
 
-from subspace_inference import utils
+from si_local_components import utils
 from bayesian_benchmarks.models.template import RegressionModel
 
 def adjust_learning_rate(optimizer, factor):

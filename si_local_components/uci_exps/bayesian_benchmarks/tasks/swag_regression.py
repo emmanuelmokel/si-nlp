@@ -3,8 +3,9 @@ import numpy as np
 import torch
 import os, sys
 import math
+from si_local_components import losses, utils
 
-from subspace_inference import models, losses, posteriors, utils
+from subspace_inference import models, posteriors
 # from swag.posteriors import SWAG, EllipticalSliceSampling, BenchmarkPyro, BenchmarkVIModel
 from regression import run
 from bayesian_benchmarks.data import get_regression_data
