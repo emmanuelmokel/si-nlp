@@ -11,7 +11,7 @@ import torch
 import numpy as np
 
 from sklearn.decomposition import TruncatedSVD
-from sklearn.decomposition.pca import _assess_dimension_
+from sklearn.decomposition._pca import _assess_dimension
 from sklearn.utils.extmath import randomized_svd
 
 
@@ -142,9 +142,8 @@ class PCASpace(CovarianceSpace):
                 # secondary correction term based on the rank of the matrix + degrees of freedom
                 m = cov_mat_sqrt_np.shape[1] * rank - rank * (rank + 1) / 2.
                 correction[rank] = 0.5 * m * np.log(cov_mat_sqrt_np.shape[0])
-                ll[rank] = _assess_dimension_(spectrum=eigs,
+                ll[rank] = _assess_dimension(spectrum=eigs,
                                               rank=rank,
-                                              n_features=min(cov_mat_sqrt_np.shape),
                                               n_samples=max(cov_mat_sqrt_np.shape))
             
             self.ll = ll

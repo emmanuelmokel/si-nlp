@@ -1,6 +1,6 @@
 import torch
 
-from ..utils import flatten, set_weights
+from utils import flatten, set_weights
 from .subspaces import Subspace
 
 
