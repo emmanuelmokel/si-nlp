@@ -1,0 +1,13 @@
+Metadata-Version: 1.1
+Name: subspace-inference
+Version: 0.0
+Summary: Subspace Inference for Bayesian Deep Learning
+Home-page: https://github.com/wjmaddox/drbayes
+Author: Pavel Izmailov, Wesley Maddox, Polina Kirichenko, Timur Garipov, Dmitry Vetrov, Andrew Gordon Wilson
+Author-email: wm326@cornell.edu
+License: MPL-2.0
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: Development Status :: 0
+Classifier: Intended Audience :: Science/Research
+Classifier: Programming Language :: Python :: 3.6

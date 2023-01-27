@@ -1,0 +1,10 @@
+setup.py
+subspace_inference/__init__.py
+subspace_inference/data.py
+subspace_inference/losses.py
+subspace_inference/utils.py
+subspace_inference.egg-info/PKG-INFO
+subspace_inference.egg-info/SOURCES.txt
+subspace_inference.egg-info/dependency_links.txt
+subspace_inference.egg-info/requires.txt
+subspace_inference.egg-info/top_level.txt
