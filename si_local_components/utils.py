@@ -71,7 +71,7 @@ def save_checkpoint(dir, epoch=None, name='checkpoint', **kwargs):
     torch.save(state, filepath)
 
 
-def train_epoch(loader, model, criterion, optimizer, cuda=True, regression=False, verbose=False, subset=None):
+def train_epoch(loader, model, criterion, optimizer, cuda=False, regression=False, verbose=False, subset=None):
     loss_sum = 0.0
     stats_sum = defaultdict(float)
     correct = 0.0
@@ -124,7 +124,7 @@ def train_epoch(loader, model, criterion, optimizer, cuda=True, regression=False
     }
 
 
-def eval(loader, model, criterion, cuda=True, regression=False, verbose=False):
+def eval(loader, model, criterion, cuda=False, regression=False, verbose=False):
     loss_sum = 0.0
     correct = 0.0
     stats_sum = defaultdict(float)
@@ -260,7 +260,7 @@ def inv_softmax(x, eps = 1e-10):
     return torch.log(x/(1.0 - x + eps))
 
 
-def predictions(test_loader, model, seed=None, cuda=True, regression=False, **kwargs):
+def predictions(test_loader, model, seed=None, cuda=False, regression=False, **kwargs):
     #will assume that model is already in eval mode
     #model.eval()
     preds = []
