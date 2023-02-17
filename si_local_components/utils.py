@@ -169,9 +169,9 @@ def predict(loader, model, verbose=False):
     offset = 0
     with torch.no_grad():
         for input, target in loader:
-           
-            if cuda:
-		 input = input.cuda(non_blocking=True)
+          
+            
+	    #input = input.cuda(non_blocking=True)
             output = model(input)
 
             batch_size = input.size(0)
