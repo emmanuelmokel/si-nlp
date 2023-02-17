@@ -117,6 +117,7 @@ class PCASpace(CovarianceSpace):
 
         cov_mat_sqrt_np = self.cov_mat_sqrt.clone().numpy()
 
+        
         # perform PCA on DD'
         cov_mat_sqrt_np /= (max(1, self.rank.item() - 1))**0.5
 

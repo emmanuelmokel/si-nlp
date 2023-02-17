@@ -82,7 +82,8 @@ loaders, num_classes = data.loaders(
     args.num_workers,
     model_cfg.transform_train,
     model_cfg.transform_test,
-    use_validation=not args.use_test,
+   # use_validation=not args.use_test,
+    use_validation=True, 
     split_classes=args.split_classes
 )
 

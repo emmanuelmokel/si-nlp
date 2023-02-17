@@ -164,7 +164,9 @@ if args.curve:
         print(utils.eval(loaders['test'], model, losses.cross_entropy))
 
 else:
-    assert len(args.checkpoint) == 1
+    print(args.checkpoint)
+    args.checkpoint = [args.checkpoint]
+    #assert len(args.checkpoint) == 1
     swag_model = SWAG(
         model_cfg.base,
         num_classes=num_classes,
@@ -180,6 +182,7 @@ else:
 
     print('Loading: %s' % args.checkpoint[0])
     ckpt = torch.load(args.checkpoint[0])
+    #import ipdb; ipdb.set_trace()
     swag_model.load_state_dict(ckpt['state_dict'], strict=False)
 
     # first take as input SWA
@@ -188,7 +191,8 @@ else:
     print(utils.eval(loaders['test'], swag_model, losses.cross_entropy))
 
     mean, variance, cov_factor = swag_model.get_space()
-
+    print(cov_factor.numpy().shape)
+	
     print(np.linalg.norm(cov_factor, axis=1))
     if args.random:
         cov_factor = cov_factor.cpu().numpy()
