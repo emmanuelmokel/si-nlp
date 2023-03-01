@@ -31,10 +31,10 @@ from transformers import (
 from transformers.utils import check_min_version, get_full_repo_name, send_example_telemetry
 from transformers.utils.versions import require_version
 
-check_min_version("4.23.0.dev0")
+check_min_version("4.27.0.dev0")
 
 logger = get_logger(__name__) 
-logger.setLevel(logging.DEBUG)
+#logger.setLevel(logging.DEBUG)
 
 require_version("datasets>=1.8.0", "To fix: pip install -r examples/pytorch/text-classification/requirements.txt")
 
@@ -172,11 +172,12 @@ def parse_args():
         action="store_true",
         help="Whether or not to enable to load a pretrained model whose head dimensions are different.",
     )
-    args = parser.parse_args(args = ['--model_name_or_path', 'distilbert-base-uncased'])
-a = parse_args()
-import ipdb; ipdb.set_trace()
+    args = parser.parse_args()
+    return args
+
+
 def main():
-    args = a
+    args = parse_args()
     # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The
     # information sent is the one passed as arguments along with your Python/PyTorch versions.
     send_example_telemetry("run_glue_no_trainer", args)
