@@ -173,9 +173,10 @@ def parse_args():
         help="Whether or not to enable to load a pretrained model whose head dimensions are different.",
     )
     args = parser.parse_args(args = ['--model_name_or_path', 'distilbert-base-uncased'])
-
+a = parse_args()
+import ipdb; ipdb.set_trace()
 def main():
-    #args = a
+    args = a
     # Sending telemetry. Tracking the example usage helps us better allocate resources to maintain them. The
     # information sent is the one passed as arguments along with your Python/PyTorch versions.
     send_example_telemetry("run_glue_no_trainer", args)
@@ -594,3 +595,6 @@ def main():
     if args.output_dir is not None:
         with open(os.path.join(args.output_dir, "all_results.json"), "w") as f:
             json.dump({"eval_accuracy": eval_metric["accuracy"]}, f)
+if __name__ == "__main__":
+    main()
+   
