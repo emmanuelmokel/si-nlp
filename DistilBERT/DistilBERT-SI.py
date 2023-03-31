@@ -4,12 +4,18 @@ import os, sys
 import numpy as np
 import argparse
 import torch.nn.functional as F
+import datasets
+import transformers
 
-# Change directory here to be able to access models properly
-import models
+from accelerate.logging import get_logger
+from transformers import PretrainedConfig, AutoConfig
+from datasets import load_dataset
+from ../posteriors import 
+from .. import data, losses, utils
 
-dBERT = torch.load('DistilBERT-Results/pytorch_model.bin')
+logger = get_logger(__name__)
 
+# Using relevant arguments for argparsers
 parser = argparse.ArgumentParser(description='SGD/SWA training')
 parser.add_argument('--dir', type=str, default=None, required=True, help='training directory (default: None)')
 parser.add_argument('--use_test', dest='use_test', action='store_true', help='use test dataset instead of validation (default: False)')
@@ -59,4 +65,56 @@ torch.backends.cudnn.benchmark = True
 torch.manual_seed(args.seed)
 torch.cuda.manual_seed(args.seed)
 
-print()
+
+print('Using fine-tuned DistilBERT model')
+
+# Loading in DistilBERT model parameters
+dBERT = torch.load('DistilBERT-Results/pytorch_model.bin')
+
+# Using GLUE dataset
+glue_dataset = load_dataset("glue", 'cola')
+label_list = glue_dataset["train"].features["label"].names
+num_labels = len(label_list)
+
+# Defined config for dataset preprocessing
+config = AutoConfig.from_pretrained('distilbert-base-uncased', num_labels=num_labels, finetuning_task = 'cola')
+
+# Changing set order of labels in model
+label_to_id = None
+if (
+    dBERT.config.label2id != PretrainedConfig(num_labels=num_labels).label2id
+    ):
+        # Some have all caps in their config, some don't.
+        label_name_to_id = {k.lower(): v for k, v in dBERT.config.label2id.items()}
+        if list(sorted(label_name_to_id.keys())) == list(sorted(label_list)):
+            logger.info(
+                f"The configuration of the model provided the following label correspondence: {label_name_to_id}. "
+                "Using it!"
+            )
+            label_to_id = {i: label_name_to_id[label_list[i]] for i in range(num_labels)}
+        else:
+            logger.warning(
+                "Your model seems to have been trained with labels, but they don't match the dataset: ",
+                f"model labels: {list(sorted(label_name_to_id.keys()))}, dataset labels: {list(sorted(label_list))}."
+                "\nIgnoring the model labels as a result.",
+            )
+if label_to_id is not None:
+        dBERT.config.label2id = label_to_id
+        dBERT.config.id2label = {id: label for label, id in config.label2id.items()}
+
+
+dBERT.to(args.device)
+
+if args.cov_mat:
+    args.no_cov_mat = False
+else:
+    args.no_cov_mat = True
+
+if args.swag:
+    print('SWAG training')
+    swag_model = SWAG(dBERT.base, 
+                    subspace_type=args.subspace, subspace_kwargs={'max_rank': args.max_num_models},
+                    *dBERT.args, num_classes=num_classes, **dBERT.kwargs)
+    swag_model.to(args.device)
+else:
+    print('SGD training')
