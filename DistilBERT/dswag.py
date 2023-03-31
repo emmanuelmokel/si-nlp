@@ -1,0 +1,1 @@
+# SWAG training script for DistilBERT model
