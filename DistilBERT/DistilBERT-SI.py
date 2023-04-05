@@ -1,17 +1,25 @@
 # Python file in order to test subspace inference techniques with DistilBERT
 import torch
+import argparse
 import os, sys
 import numpy as np
 import time
 import tabulate
+import logging
 import argparse
 import torch.nn.functional as F
 import datasets
 import transformers
 
 from accelerate.logging import get_logger
-from transformers import PretrainedConfig, AutoConfig
+from accelerate import Accelerator
+from transformers import (PretrainedConfig, 
+                          AutoConfig, 
+                          AutoTokenizer, 
+                          AutoModelForSequenceClassification)
 from datasets import load_dataset
+
+from transformers.utils import check_min_version, get_full_repo_name, send_example_telemetry
 import dswag
 from .. import data, losses, utils
 
@@ -49,8 +57,39 @@ parser.add_argument('--no_schedule', action='store_true', help='store schedule')
 parser.add_argument('--save_iterates', action='store_true', help='save all iterates in the SWA(G) stage (default: off)')
 parser.add_argument('--inference', choices=['low_rank_gaussian', 'projected_sgd'], default='low_rank_gaussian')
 parser.add_argument('--subspace', choices=['covariance', 'pca', 'freq_dir'], default='covariance')
+parser.add_argument("--task_name", type=str, default=None, help="The name of the glue task to train on.")
+parser.add_argument("--with_tracking", action="store_true", help="Whether to enable experiment trackers for logging.",)
+parser.add_argument("--report_to", type=str, default="all", help=(
+            'The integration to report the results and logs to. Supported platforms are `"tensorboard"`,'
+            ' `"wandb"` and `"comet_ml"`. Use `"all"` (default) to report to all integrations.'
+            "Only applicable when `--with_tracking` is passed."
+        ),
+    )
+parser.add_argument("--use_slow_tokenizer", action="store_true",
+        help="If passed, will use a slow tokenizer (not backed by the 🤗 Tokenizers library).",)
 args = parser.parse_args()
 
+
+send_example_telemetry("run_glue_no_trainer", args)
+
+# Initializing the accelerator
+accelerator = (Accelerator(log_with=args.report_to, logging_dir=args.output_dir) if args.with_tracking else Accelerator())
+
+# Make one log on every process with the configuration for debugging.
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+    datefmt="%m/%d/%Y %H:%M:%S",
+    level=logging.INFO,
+)
+logger.info(accelerator.state, main_process_only=False)
+if accelerator.is_local_main_process:
+    datasets.utils.logging.set_verbosity_warning()
+    transformers.utils.logging.set_verbosity_info()
+else:
+    datasets.utils.logging.set_verbosity_error()
+    transformers.utils.logging.set_verbosity_error()
+
+# Handle the repository creation
 args.device = None
 if torch.cude.is_available():
     args.device = torch.device('cuda')
@@ -62,24 +101,27 @@ os.makedirs(args.dir, exist_ok=True)
 with open(os.path.join(args.dir, 'command.sh'), 'w') as f:
     f.write(' '.join(sys.argv))
     f.write('\n')
+accelerator.wait_for_everyone()
 
 torch.backends.cudnn.benchmark = True
 torch.manual_seed(args.seed)
 torch.cuda.manual_seed(args.seed)
 
-
-print('Using fine-tuned DistilBERT model')
-
-# Loading in DistilBERT model parameters
-dBERT = torch.load('DistilBERT-Results/pytorch_model.bin')
-
-# Using GLUE dataset
-glue_dataset = load_dataset("glue", 'cola')
-label_list = glue_dataset["train"].features["label"].names
+# Using datasets coming from GLUE
+# This (and subsequent code) may not work for regression task (stsb)
+raw_datasets = load_dataset("glue", args.task_name)
+label_list = raw_datasets["train"].features["label"].names
 num_labels = len(label_list)
 
 # Defined config for dataset preprocessing
 config = AutoConfig.from_pretrained('distilbert-base-uncased', num_labels=num_labels, finetuning_task = 'cola')
+tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased', use_fast=not args.use_slow_tokenizer)
+dBERT = AutoModelForSequenceClassification.from_pretrained(
+        'distilbert-base-uncased',
+        from_tf=bool(".ckpt" in args.model_name_or_path),
+        config=config,
+        ignore_mismatched_sizes=False,
+    )
 
 # Changing set order of labels in model
 label_to_id = None
