@@ -10,7 +10,7 @@ import transformers
 from accelerate.logging import get_logger
 from transformers import PretrainedConfig, AutoConfig
 from datasets import load_dataset
-from ../posteriors import 
+from ../posteriors import swag
 from .. import data, losses, utils
 
 logger = get_logger(__name__)
