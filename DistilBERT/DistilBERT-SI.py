@@ -2,6 +2,8 @@
 import torch
 import os, sys
 import numpy as np
+import time
+import tabulate
 import argparse
 import torch.nn.functional as F
 import datasets
@@ -10,7 +12,7 @@ import transformers
 from accelerate.logging import get_logger
 from transformers import PretrainedConfig, AutoConfig
 from datasets import load_dataset
-from ../posteriors import swag
+import dswag
 from .. import data, losses, utils
 
 logger = get_logger(__name__)
@@ -114,7 +116,177 @@ if args.swag:
     print('SWAG training')
     swag_model = SWAG(dBERT.base, 
                     subspace_type=args.subspace, subspace_kwargs={'max_rank': args.max_num_models},
-                    *dBERT.args, num_classes=num_classes, **dBERT.kwargs)
+                    *dBERT.args, **dBERT.kwargs)
     swag_model.to(args.device)
 else:
     print('SGD training')
+
+def schedule(epoch):
+    t = (epoch) / (args.swag_start if args.swag else args.epochs)
+    lr_ratio = args.swag_lr / args.lr_init if args.swag else 0.01
+    if t <= 0.5:
+        factor = 1.0
+    elif t <= 0.9:
+        factor = 1.0 - (1.0 - lr_ratio) * (t - 0.5) / 0.4
+    else:
+        factor = lr_ratio
+    return args.lr_init * factor
+
+# use a slightly modified loss function that allows input of model 
+if args.loss == 'CE':
+    criterion = losses.cross_entropy
+    #criterion = F.cross_entropy
+elif args.loss == 'adv_CE':
+    criterion = losses.adversarial_cross_entropy
+
+
+
+# ADAM as opposed to standard SGD for DistilBERT
+
+no_decay = ["bias", "LayerNorm.weight"]
+optimizer_grouped_parameters = [
+    {
+        "params": [p for n, p in dBERT.named_parameters() if not any(nd in n for nd in no_decay)],
+        "weight_decay": args.weight_decay,
+    },
+    {
+        "params": [p for n, p in dBERT.named_parameters() if any(nd in n for nd in no_decay)],
+        "weight_decay": 0.0,
+    },
+]
+
+
+optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=args.lr_init)
+
+start_epoch = 0
+if args.resume is not None:
+    print('Resume training from %s' % args.resume)
+    checkpoint = torch.load(args.resume)
+    start_epoch = checkpoint['epoch']
+    dBERT.load_state_dict(checkpoint['state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
+
+if args.swag and args.swag_resume is not None:
+    checkpoint = torch.load(args.swag_resume)
+    swag_model.subspace.rank = torch.tensor(0)
+    swag_model.load_state_dict(checkpoint['state_dict'])
+
+columns = ['ep', 'lr', 'tr_loss', 'tr_acc', 'te_loss', 'te_acc', 'time', 'mem_usage']
+if args.swag:
+    columns = columns[:-2] + ['swa_te_loss', 'swa_te_acc'] + columns[-2:]
+    swag_res = {'loss': None, 'accuracy': None}
+
+utils.save_checkpoint(
+    args.dir,
+    start_epoch,
+    state_dict=dBERT.state_dict(),
+    optimizer=optimizer.state_dict()
+)
+
+sgd_ens_preds = None
+sgd_targets = None
+n_ensembled = 0.
+
+for epoch in range(start_epoch, args.epochs):
+    time_ep = time.time()
+
+    if not args.no_schedule:
+        lr = schedule(epoch)
+        utils.adjust_learning_rate(optimizer, lr)
+    else:
+        lr = args.lr_init
+    
+    if (args.swag and (epoch + 1) > args.swag_start) and args.cov_mat:
+        train_res = utils.train_epoch(loaders['train'], model, criterion, optimizer, cuda = False)
+    else:
+        train_res = utils.train_epoch(loaders['train'], model, criterion, optimizer, cuda = False)
+
+    if epoch == 0 or epoch % args.eval_freq == args.eval_freq - 1 or epoch == args.epochs - 1:
+        test_res = utils.eval(loaders['test'], model, criterion)
+    else:
+        test_res = {'loss': None, 'accuracy': None}
+
+    if args.swag and (epoch + 1) > args.swag_start and (epoch + 1 - args.swag_start) % args.swag_c_epochs == 0:
+        #sgd_preds, sgd_targets = utils.predictions(loaders["test"], model)
+        sgd_res = utils.predict(loaders["test"], model)
+        sgd_preds = sgd_res["predictions"]
+        sgd_targets = sgd_res["targets"]
+        # print("updating sgd_ens")
+        if sgd_ens_preds is None:
+            sgd_ens_preds = sgd_preds.copy()
+        else:
+            #TODO: rewrite in a numerically stable way
+            sgd_ens_preds = sgd_ens_preds * n_ensembled / (n_ensembled + 1) + sgd_preds/ (n_ensembled + 1)
+        n_ensembled += 1
+        swag_model.collect_model(model)
+        if epoch == 0 or epoch % args.eval_freq == args.eval_freq - 1 or epoch == args.epochs - 1:
+            swag_model.set_swa()
+            utils.bn_update(loaders['train'], swag_model)
+            swag_res = utils.eval(loaders['test'], swag_model, criterion)
+        else:
+            swag_res = {'loss': None, 'accuracy': None}
+
+    if (epoch + 1) % args.save_freq == 0:
+        utils.save_checkpoint(
+            args.dir,
+            epoch + 1,
+            state_dict=model.state_dict(),
+            optimizer=optimizer.state_dict()
+        )
+        if args.swag:
+            utils.save_checkpoint(
+                args.dir,
+                epoch + 1,
+                name='swag',
+                state_dict=swag_model.state_dict(),
+            )
+            
+    elif args.save_iterates:
+        utils.save_checkpoint(
+            args.dir,
+            epoch + 1,
+            state_dict=model.state_dict(),
+            optimizer=optimizer.state_dict()
+        )
+
+    time_ep = time.time() - time_ep
+    memory_usage = torch.cuda.memory_allocated()/(1024.0 ** 3)
+    values = [epoch + 1, lr, train_res['loss'], train_res['accuracy'], test_res['loss'], test_res['accuracy'], time_ep, memory_usage]
+    if args.swag:
+        values = values[:-2] + [swag_res['loss'], swag_res['accuracy']] + values[-2:]
+    table = tabulate.tabulate([values], columns, tablefmt='simple', floatfmt='8.4f')
+    if epoch % 40 == 0:
+        table = table.split('\n')
+        table = '\n'.join([table[1]] + table)
+    else:
+        table = table.split('\n')[2]
+    print(table)
+
+if args.epochs % args.save_freq != 0:
+    utils.save_checkpoint(
+        args.dir,
+        args.epochs,
+        state_dict=model.state_dict(),
+        optimizer=optimizer.state_dict()
+    )
+    if args.swag and args.epochs > args.swag_start:
+        utils.save_checkpoint(
+            args.dir,
+            args.epochs,
+            name='swag',
+            state_dict=swag_model.state_dict(),
+        )
+
+        utils.set_weights(model, swag_model.mean)
+        utils.bn_update(loaders['train'], model)
+        print("SWA solution")
+        print(utils.eval(loaders['test'], model, losses.cross_entropy))
+
+        utils.save_checkpoint(
+            args.dir,
+            name='swa',
+            state_dict=model.state_dict(),
+        )
+
+if args.swag:
+    np.savez(os.path.join(args.dir, "sgd_ens_preds.npz"), predictions=sgd_ens_preds, targets=sgd_targets)
