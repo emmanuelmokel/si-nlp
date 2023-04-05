@@ -1,6 +1,4 @@
 # Python file in order to test subspace inference techniques with DistilBERT
-import ipdb
-ipdb.set_trace()
 import torch
 import argparse
 import os, sys
@@ -23,7 +21,9 @@ from datasets import load_dataset
 
 from transformers.utils import check_min_version, get_full_repo_name, send_example_telemetry
 import dswag
-from .. import data, losses, utils
+
+sys.path.append('..')
+import data, losses, utils
 
 logger = get_logger(__name__)
 
@@ -34,8 +34,6 @@ parser.add_argument('--use_test', dest='use_test', action='store_true', help='us
 parser.add_argument('--split_classes', type=int, default=None)
 parser.add_argument('--batch_size', type=int, default=128, metavar='N', help='input batch size (default: 128)')
 parser.add_argument('--num_workers', type=int, default=4, metavar='N', help='number of workers (default: 4)')
-parser.add_argument('--model', type=str, default=None, required=True, metavar='MODEL',
-                    help='model name (default: None)')
 parser.add_argument('--resume', type=str, default=None, metavar='CKPT',
                     help='checkpoint to resume training from (default: None)')
 parser.add_argument('--epochs', type=int, default=200, metavar='N', help='number of epochs to train (default: 200)')
