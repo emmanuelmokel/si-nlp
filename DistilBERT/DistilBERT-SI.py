@@ -22,8 +22,8 @@ from datasets import load_dataset
 from transformers.utils import check_min_version, get_full_repo_name, send_example_telemetry
 import dswag
 
-sys.path.append('..')
 import data, losses, utils
+sys.path.remove(os.path.abspath('../si_local_components'))
 
 logger = get_logger(__name__)
 

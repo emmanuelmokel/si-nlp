@@ -1,9 +1,13 @@
 # SWAG training script for DistilBERT model
 
 import torch
+import os, sys
+
+sys.path.append(os.path.abspath('../si_local_components'))
+import utils
 
 from utils import flatten, set_weights
-from .subspaces import Subspace
+from posteriors.subspaces import Subspace
 
 
 class SWAG(torch.nn.Module):
