@@ -113,6 +113,25 @@ raw_datasets = load_dataset("glue", args.task_name)
 label_list = raw_datasets["train"].features["label"].names
 num_labels = len(label_list)
 
+shuffle_train = True
+loaders = \
+        {
+            'train': torch.utils.data.DataLoader(
+                raw_datasets["train"],
+                batch_size=args.batch_size,
+                shuffle=True and shuffle_train,
+                num_workers=args.num_workers,
+                pin_memory=True
+            ),
+            'test': torch.utils.data.DataLoader(
+                raw_datasets["test"],
+                batch_size=args.batch_size,
+                shuffle=False,
+                num_workers=args.num_workers,
+                pin_memory=True
+            ),
+        }, \
+
 # Defined config for dataset preprocessing
 config = AutoConfig.from_pretrained('distilbert-base-uncased', num_labels=num_labels, finetuning_task = 'cola')
 tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased', use_fast=not args.use_slow_tokenizer)
@@ -239,18 +258,18 @@ for epoch in range(start_epoch, args.epochs):
         lr = args.lr_init
     
     if (args.swag and (epoch + 1) > args.swag_start) and args.cov_mat:
-        train_res = utils.train_epoch(loaders['train'], model, criterion, optimizer, cuda = False)
+        train_res = utils.train_epoch(loaders['train'], dBERT, criterion, optimizer, cuda = False)
     else:
-        train_res = utils.train_epoch(loaders['train'], model, criterion, optimizer, cuda = False)
+        train_res = utils.train_epoch(loaders['train'], dBERT, criterion, optimizer, cuda = False)
 
     if epoch == 0 or epoch % args.eval_freq == args.eval_freq - 1 or epoch == args.epochs - 1:
-        test_res = utils.eval(loaders['test'], model, criterion)
+        test_res = utils.eval(loaders['test'], dBERT, criterion)
     else:
         test_res = {'loss': None, 'accuracy': None}
 
     if args.swag and (epoch + 1) > args.swag_start and (epoch + 1 - args.swag_start) % args.swag_c_epochs == 0:
         #sgd_preds, sgd_targets = utils.predictions(loaders["test"], model)
-        sgd_res = utils.predict(loaders["test"], model)
+        sgd_res = utils.predict(loaders["test"], dBERT)
         sgd_preds = sgd_res["predictions"]
         sgd_targets = sgd_res["targets"]
         # print("updating sgd_ens")
@@ -260,7 +279,7 @@ for epoch in range(start_epoch, args.epochs):
             #TODO: rewrite in a numerically stable way
             sgd_ens_preds = sgd_ens_preds * n_ensembled / (n_ensembled + 1) + sgd_preds/ (n_ensembled + 1)
         n_ensembled += 1
-        swag_model.collect_model(model)
+        swag_model.collect_model(dBERT)
         if epoch == 0 or epoch % args.eval_freq == args.eval_freq - 1 or epoch == args.epochs - 1:
             swag_model.set_swa()
             utils.bn_update(loaders['train'], swag_model)
@@ -272,7 +291,7 @@ for epoch in range(start_epoch, args.epochs):
         utils.save_checkpoint(
             args.dir,
             epoch + 1,
-            state_dict=model.state_dict(),
+            state_dict=dBERT.state_dict(),
             optimizer=optimizer.state_dict()
         )
         if args.swag:
@@ -287,7 +306,7 @@ for epoch in range(start_epoch, args.epochs):
         utils.save_checkpoint(
             args.dir,
             epoch + 1,
-            state_dict=model.state_dict(),
+            state_dict=dBERT.state_dict(),
             optimizer=optimizer.state_dict()
         )
 
@@ -308,7 +327,7 @@ if args.epochs % args.save_freq != 0:
     utils.save_checkpoint(
         args.dir,
         args.epochs,
-        state_dict=model.state_dict(),
+        state_dict=dBERT.state_dict(),
         optimizer=optimizer.state_dict()
     )
     if args.swag and args.epochs > args.swag_start:
@@ -319,15 +338,15 @@ if args.epochs % args.save_freq != 0:
             state_dict=swag_model.state_dict(),
         )
 
-        utils.set_weights(model, swag_model.mean)
-        utils.bn_update(loaders['train'], model)
+        utils.set_weights(dBERT, swag_model.mean)
+        utils.bn_update(loaders['train'], dBERT)
         print("SWA solution")
-        print(utils.eval(loaders['test'], model, losses.cross_entropy))
+        print(utils.eval(loaders['test'], dBERT, losses.cross_entropy))
 
         utils.save_checkpoint(
             args.dir,
             name='swa',
-            state_dict=model.state_dict(),
+            state_dict=dBERT.state_dict(),
         )
 
 if args.swag:
