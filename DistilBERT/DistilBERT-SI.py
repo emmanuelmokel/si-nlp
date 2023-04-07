@@ -65,8 +65,8 @@ parser.add_argument("--report_to", type=str, default="all", help=(
             "Only applicable when `--with_tracking` is passed."
         ),
     )
-parser.add_argument("--use_slow_tokenizer", action="store_true",
-        help="If passed, will use a slow tokenizer (not backed by the 🤗 Tokenizers library).",)
+parser.add_argument("--use_slow_tokenizer", action="store_true",  help="If passed, will use a slow tokenizer (not backed by the 🤗 Tokenizers library).",)
+parser.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay to use.")
 args = parser.parse_args()
 
 
@@ -118,7 +118,7 @@ config = AutoConfig.from_pretrained('distilbert-base-uncased', num_labels=num_la
 tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased', use_fast=not args.use_slow_tokenizer)
 dBERT = AutoModelForSequenceClassification.from_pretrained(
         'distilbert-base-uncased',
-        from_tf=bool(".ckpt" in args.model_name_or_path),
+        from_tf=bool(".ckpt" in 'distilbert-base-uncased'),
         config=config,
         ignore_mismatched_sizes=False,
     )
