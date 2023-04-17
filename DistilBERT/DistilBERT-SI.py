@@ -130,7 +130,12 @@ loaders = \
                 num_workers=args.num_workers,
                 pin_memory=True
             ),
+<<<<<<< HEAD
         }, \
+=======
+        }
+
+>>>>>>> 5f272c5 (Reconciled differenced with putty SI)
 
 # Defined config for dataset preprocessing
 config = AutoConfig.from_pretrained('distilbert-base-uncased', num_labels=num_labels, finetuning_task = 'cola')
@@ -141,6 +146,9 @@ dBERT = AutoModelForSequenceClassification.from_pretrained(
         config=config,
         ignore_mismatched_sizes=False,
     )
+
+
+
 
 # Changing set order of labels in model
 label_to_id = None
@@ -247,6 +255,9 @@ utils.save_checkpoint(
 sgd_ens_preds = None
 sgd_targets = None
 n_ensembled = 0.
+
+import ipdb
+ipdb.set_trace()
 
 for epoch in range(start_epoch, args.epochs):
     time_ep = time.time()
