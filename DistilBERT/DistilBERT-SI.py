@@ -130,24 +130,12 @@ loaders = \
                 num_workers=args.num_workers,
                 pin_memory=True
             ),
-<<<<<<< HEAD
         }, \
-=======
-        }
+    
 
->>>>>>> 5f272c5 (Reconciled differenced with putty SI)
 
 # Defined config for dataset preprocessing
-config = AutoConfig.from_pretrained('distilbert-base-uncased', num_labels=num_labels, finetuning_task = 'cola')
-tokenizer = AutoTokenizer.from_pretrained('distilbert-base-uncased', use_fast=not args.use_slow_tokenizer)
-dBERT = AutoModelForSequenceClassification.from_pretrained(
-        'distilbert-base-uncased',
-        from_tf=bool(".ckpt" in 'distilbert-base-uncased'),
-        config=config,
-        ignore_mismatched_sizes=False,
-    )
-
-
+dBERT = torch.load('DistilBERT-Results/pytorch_model.bin')
 
 
 # Changing set order of labels in model
