@@ -31,7 +31,7 @@ from transformers import (
 from transformers.utils import check_min_version, get_full_repo_name, send_example_telemetry
 from transformers.utils.versions import require_version
 
-check_min_version("4.27.0.dev0")
+check_min_version("4.26.1.dev0")
 
 logger = get_logger(__name__) 
 #logger.setLevel(logging.DEBUG)
@@ -453,6 +453,7 @@ def main():
     completed_steps = 0
     starting_epoch = 0
     # Potentially load in the weights and states from a previous save
+#    import ipdb; ipdb.set_trace()
     if args.resume_from_checkpoint:
         if args.resume_from_checkpoint is not None or args.resume_from_checkpoint != "":
             accelerator.print(f"Resumed from checkpoint: {args.resume_from_checkpoint}")
