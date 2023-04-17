@@ -133,11 +133,11 @@ loaders = \
         }, \
     
 
-
 # Defined config for dataset preprocessing
 dBERT = torch.load('DistilBERT-Results/pytorch_model.bin')
 
-
+# Is changing the order of labels necessary? This wwas done before fine tuning happened
+""""
 # Changing set order of labels in model
 label_to_id = None
 if (
@@ -160,7 +160,7 @@ if (
 if label_to_id is not None:
         dBERT.config.label2id = label_to_id
         dBERT.config.id2label = {id: label for label, id in config.label2id.items()}
-
+"""
 
 dBERT.to(args.device)
 
@@ -197,7 +197,7 @@ elif args.loss == 'adv_CE':
     criterion = losses.adversarial_cross_entropy
 
 
-
+"""
 # ADAM as opposed to standard SGD for DistilBERT
 
 no_decay = ["bias", "LayerNorm.weight"]
@@ -214,6 +214,15 @@ optimizer_grouped_parameters = [
 
 
 optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=args.lr_init)
+"""
+
+# Paper uses SGD trajectory to find optimal parameters in subspace
+optimizer = torch.optim.SGD(
+    dBERT.parameters(),
+    lr=args.lr_init,
+    momentum=args.momentum,
+    weight_decay=args.wd
+)
 
 start_epoch = 0
 if args.resume is not None:
