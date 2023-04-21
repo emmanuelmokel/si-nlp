@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+from sklearn.metrics import matthews_corrcoef
 
 class GaussianLikelihood:
     """
@@ -50,6 +51,13 @@ def cross_entropy_output(output, target):
     loss = F.cross_entropy(output, target)
 
     return loss, {}
+
+def matthews_loss(model, input, target):
+     # Matthews correlation coefficent
+     output = model(input)
+     loss = matthews_corrcoef(target, output)
+
+     return loss, output, {}
 
 
 def adversarial_cross_entropy(model, input, target, lossfn = F.cross_entropy, epsilon = 0.01):
