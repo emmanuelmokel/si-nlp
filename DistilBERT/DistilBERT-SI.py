@@ -52,6 +52,21 @@ parser.add_argument('--max_num_models', type=int, default=20, help='maximum numb
 parser.add_argument('--swag_resume', type=str, default=None, metavar='CKPT',
                     help='checkpoint to restor SWA from (default: None)')
 parser.add_argument('--loss', type=str, default='CE', help='loss to use for training model (default: Cross-entropy)')
+
+
+parser.add_argument("--model_name_or_path", type=str, help="Path to pretrained model or model identifier from huggingface.co/models.", required=True,)
+parser.add_argument("--max_length", type=int, default=128,
+                    help=("The maximum total input sequence length after tokenization. Sequences longer than this will be truncated,"" sequences shorter will be padded if `--pad_to_max_lengh` is passed."),)
+parser.add_argument("--per_device_train_batch_size", type=int, default=8, help="Batch size (per device) for the training dataloader.",)
+
+
+
+
+
+
+
+
+
 parser.add_argument('--seed', type=int, default=1, metavar='S', help='random seed (default: 1)')
 parser.add_argument('--no_schedule', action='store_true', help='store schedule')
 parser.add_argument('--save_iterates', action='store_true', help='save all iterates in the SWA(G) stage (default: off)')
