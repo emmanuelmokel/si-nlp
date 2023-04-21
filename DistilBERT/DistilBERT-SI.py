@@ -15,8 +15,8 @@ from accelerate.logging import get_logger
 from accelerate import Accelerator
 from transformers import (PretrainedConfig, 
                           AutoConfig, 
-                          AutoTokenizer, 
-                          AutoModelForSequenceClassification)
+                          DistilBertTokenizer, 
+                          DistilBertForSequenceClassification)
 from datasets import load_dataset
 
 from transformers.utils import check_min_version, get_full_repo_name, send_example_telemetry
@@ -149,7 +149,13 @@ loaders = \
     
 
 # Defined config for dataset preprocessing
-dBERT = torch.load('DistilBERT-Results/pytorch_model.bin')
+
+dBERT = DistilBertForSequenceClassification.from_pretrained('DistilBERT-Results')
+tokenizer = DistilBertTokenizer.from_pretrained('DistilBERT-Results')
+
+#dBERT = torch.load('DistilBERT-Results/pytorch_model.bin')
+
+dBERT.to(args.device)
 
 # Is changing the order of labels necessary? This wwas done before fine tuning happened
 """"
@@ -176,8 +182,6 @@ if label_to_id is not None:
         dBERT.config.label2id = label_to_id
         dBERT.config.id2label = {id: label for label, id in config.label2id.items()}
 """
-
-dBERT.to(args.device)
 
 if args.cov_mat:
     args.no_cov_mat = False
