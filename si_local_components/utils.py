@@ -89,7 +89,7 @@ def train_epoch(loader, model, criterion, optimizer, cuda=False, regression=Fals
     if verbose:
         loader = tqdm.tqdm(loader, total=num_batches)
 
-    for i, (input, target) in enumerate(loader):
+    for i, (input, target, idx) in enumerate(loader):
         if cuda:
             input = input.cuda(non_blocking=True)
             target = target.cuda(non_blocking=True)
@@ -135,7 +135,7 @@ def eval(loader, model, criterion, cuda=False, regression=False, verbose=False):
     with torch.no_grad():
         if verbose:
             loader = tqdm.tqdm(loader)
-        for i, (input, target) in enumerate(loader):
+        for i, (input, target, idx) in enumerate(loader):
             if cuda:
                 input = input.cuda(non_blocking=True)
                 target = target.cuda(non_blocking=True)
