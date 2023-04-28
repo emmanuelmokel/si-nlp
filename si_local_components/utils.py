@@ -102,8 +102,10 @@ def train_epoch(loader, model, criterion, optimizer, cuda=False, regression=Fals
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        
+       
             
-        loss_sum += loss.data.item() * batch.size(0)
+        loss_sum += loss.data.item() * batch.input_ids.size(0)
         #for key, value in stats.items():
         #    stats_sum[key] += value * input.size(0)
 
@@ -111,7 +113,7 @@ def train_epoch(loader, model, criterion, optimizer, cuda=False, regression=Fals
         #    pred = output.data.argmax(1, keepdim=True)
         #    correct += pred.eq(target.data.view_as(pred)).sum().item()
 
-        num_objects_current += batch.size(0)
+        num_objects_current += batch.input_ids.size(0)
 
         if verbose and 10 * (i + 1) / num_batches >= verb_stage + 1:
             print('Stage %d/10. Loss: %12.4f. Acc: %6.2f' % (
@@ -138,16 +140,16 @@ def eval(loader, model, criterion, cuda=False, regression=False, verbose=False):
     with torch.no_grad():
         if verbose:
             loader = tqdm.tqdm(loader)
-        for i, (input, target, idx) in enumerate(loader):
-            if cuda:
-                input = input.cuda(non_blocking=True)
-                target = target.cuda(non_blocking=True)
+        for i, (batch) in enumerate(loader):
+            #if cuda:
+            #    input = input.cuda(non_blocking=True)
+            #    target = target.cuda(non_blocking=True)
 
-            loss, output, stats = criterion(model, input, target)
+            loss = criterion(model, batch)
 
-            loss_sum += loss.item() * input.size(0)
-            for key, value in stats.items():
-                stats_sum[key] += value
+            loss_sum += loss.item() * batch.inputs_ids.size(0)
+           # for key, value in stats.items():
+           #     stats_sum[key] += value
 
             if not regression:
                 pred = output.data.argmax(1, keepdim=True)
