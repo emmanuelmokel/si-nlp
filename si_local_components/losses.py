@@ -35,14 +35,14 @@ class GaussianLikelihood:
             return loss.mean(), output[:,0], {'mse': torch.mean((mean - target)**2.0)}
 
 
-def cross_entropy(model, input, target):
+def cross_entropy(model, batch):
     # standard cross-entropy loss function
+    
+    output = model(**batch)
 
-    output = model(input)
+    loss = output.loss
 
-    loss = F.cross_entropy(output, target)
-
-    return loss, output, {}
+    return loss #, output, {}
 
 
 def cross_entropy_output(output, target):
@@ -54,7 +54,7 @@ def cross_entropy_output(output, target):
 
 def matthews_loss(model, input, target):
      # Matthews correlation coefficent
-     output = model(input)
+     output = model(**input)
      loss = matthews_corrcoef(target, output)
 
      return loss, output, {}

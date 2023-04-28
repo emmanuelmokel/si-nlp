@@ -89,12 +89,15 @@ def train_epoch(loader, model, criterion, optimizer, cuda=False, regression=Fals
     if verbose:
         loader = tqdm.tqdm(loader, total=num_batches)
 
-    for i, (input, target, idx) in enumerate(loader):
-        if cuda:
-            input = input.cuda(non_blocking=True)
-            target = target.cuda(non_blocking=True)
+    for i, batch in enumerate(loader):
+       
+        
+        #if cuda:
+            #batch = batch.cuda(non_blocking=True)
+            #target = target.cuda(non_blocking=True)
 
-        loss, output, stats = criterion(model, input, target)
+        loss = criterion(model,batch)
+        # output, stats = criterion(model, batch)
         
         optimizer.zero_grad()
         loss.backward()
