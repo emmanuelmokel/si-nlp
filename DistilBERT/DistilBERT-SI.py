@@ -164,91 +164,55 @@ if (
             f"model labels: {list(sorted(label_name_to_id.keys()))}, dataset labels: {list(sorted(label_list))}."
             "\nIgnoring the model labels as a result.",
         )
-elif args.task_name is None and not is_regression:
+elif args.task_name is None:
     label_to_id = {v: i for i, v in enumerate(label_list)}
 
 if label_to_id is not None:
     dBERT.config.label2id = label_to_id
-        model.config.id2label = {id: label for label, id in config.label2id.items()}
-    elif args.task_name is not None and not is_regression:
-        model.config.label2id = {l: i for i, l in enumerate(label_list)}
-        model.config.id2label = {id: label for label, id in config.label2id.items()}
+    dBERT.config.id2label = {id: label for label, id in dBERT.config.label2id.items()}
+elif args.task_name is not None:
+    dBERT.config.label2id = {l: i for i, l in enumerate(label_list)}
+    dBERT.config.id2label = {id: label for label, id in dBERT.config.label2id.items()}
 
-    padding = "max_length" if args.pad_to_max_length else False
+padding = "max_length" if args.pad_to_max_length else False
 
-    def preprocess_function(examples):
-        # Tokenize the texts
-        texts = (
-            (examples[sentence1_key],) if sentence2_key is None else (examples[sentence1_key], examples[sentence2_key])
-        )
-        result = tokenizer(*texts, padding=padding, max_length=args.max_length, truncation=True)
+def preprocess_function(examples):
+    # Tokenize the texts
+    texts = (
+        (examples[sentence1_key],) if sentence2_key is None else (examples[sentence1_key], examples[sentence2_key])
+    )
+    result = tokenizer(*texts, padding=padding, max_length=args.max_length, truncation=True)
 
-        if "label" in examples:
-            if label_to_id is not None:
-                # Map labels to IDs (not necessary for GLUE tasks)
-                result["labels"] = [label_to_id[l] for l in examples["label"]]
-            else:
-                # In all cases, rename the column to labels because the model will expect that.
-                result["labels"] = examples["label"]
-        return result
+    if "label" in examples:
+        if label_to_id is not None:
+            # Map labels to IDs (not necessary for GLUE tasks)
+            result["labels"] = [label_to_id[l] for l in examples["label"]]
+        else:
+            # In all cases, rename the column to labels because the model will expect that.
+            result["labels"] = examples["label"]
+    return result
 
-    with accelerator.main_process_first():
-        processed_datasets = raw_datasets.map(
+
+processed_datasets = raw_datasets.map(
             preprocess_function,
             batched=True,
             remove_columns=raw_datasets["train"].column_names,
             desc="Running tokenizer on dataset",
-        )
+)
 
-    train_dataset = processed_datasets["train"]
-    eval_dataset = processed_datasets["validation_matched" if args.task_name == "mnli" else "validation"]
-
-    # Log a few random samples from the training set:
-    for index in random.sample(range(len(train_dataset)), 3):
-        logger.info(f"Sample {index} of the training set: {train_dataset[index]}.")
-
-    # DataLoaders creation:
-    if args.pad_to_max_length:
-        # If padding was already done ot max length, we use the default data collator that will just convert everything
-        # to tensors.
-        data_collator = default_data_collator
-    else:
-        # Otherwise, `DataCollatorWithPadding` will apply dynamic padding for us (by padding to the maximum length of
-        # the samples passed). When using mixed precision, we add `pad_to_multiple_of=8` to pad all tensors to multiple
-        # of 8s, which will enable the use of Tensor Cores on NVIDIA hardware with compute capability >= 7.5 (Volta).
-        data_collator = DataCollatorWithPadding(tokenizer, pad_to_multiple_of=(8 if accelerator.use_fp16 else None))
-
-    train_dataloader = DataLoader(
-        train_dataset, shuffle=True, collate_fn=data_collator, batch_size=args.per_device_train_batch_size
-    )
-    eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+processed_datasets.set_format("torch")
 
 loaders = \
         {
             'train': torch.utils.data.DataLoader(
-                raw_datasets["train"],
+                processed_datasets["train"],
                 batch_size=args.batch_size,
                 shuffle=True and shuffle_train,
                 num_workers=args.num_workers,
                 pin_memory=True
             ),
             'test': torch.utils.data.DataLoader(
-                raw_datasets["test"],
+                processed_datasets["test"],
                 batch_size=args.batch_size,
                 shuffle=False,
                 num_workers=args.num_workers,
