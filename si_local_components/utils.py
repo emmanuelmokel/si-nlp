@@ -103,15 +103,15 @@ def train_epoch(loader, model, criterion, optimizer, cuda=False, regression=Fals
         loss.backward()
         optimizer.step()
             
-        loss_sum += loss.data.item() * input.size(0)
-        for key, value in stats.items():
-            stats_sum[key] += value * input.size(0)
+        loss_sum += loss.data.item() * batch.size(0)
+        #for key, value in stats.items():
+        #    stats_sum[key] += value * input.size(0)
 
-        if not regression:
-            pred = output.data.argmax(1, keepdim=True)
-            correct += pred.eq(target.data.view_as(pred)).sum().item()
+        #if not regression:
+        #    pred = output.data.argmax(1, keepdim=True)
+        #    correct += pred.eq(target.data.view_as(pred)).sum().item()
 
-        num_objects_current += input.size(0)
+        num_objects_current += batch.size(0)
 
         if verbose and 10 * (i + 1) / num_batches >= verb_stage + 1:
             print('Stage %d/10. Loss: %12.4f. Acc: %6.2f' % (
@@ -123,7 +123,7 @@ def train_epoch(loader, model, criterion, optimizer, cuda=False, regression=Fals
     return {
         'loss': loss_sum / num_objects_current,
         'accuracy': None if regression else correct / num_objects_current * 100.0,
-        'stats': {key: value / num_objects_current for key, value in stats_sum.items()}
+        #'stats': {key: value / num_objects_current for key, value in stats_sum.items()}
     }
 
 
