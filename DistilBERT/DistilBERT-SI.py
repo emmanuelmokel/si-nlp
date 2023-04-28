@@ -118,8 +118,126 @@ torch.cuda.manual_seed(args.seed)
 raw_datasets = load_dataset("glue", args.task_name)
 label_list = raw_datasets["train"].features["label"].names
 num_labels = len(label_list)
-
 shuffle_train = True
+
+
+# Defined config for dataset preprocessing
+
+dBERT = DistilBertForSequenceClassification.from_pretrained('DistilBERT-Results')
+tokenizer = DistilBertTokenizer.from_pretrained('DistilBERT-Results')
+
+
+
+
+# Preprocessing the datasets
+if args.task_name is not None:
+    sentence1_key, sentence2_key = "glue"
+else:
+    # Again, we try to have some nice defaults but don't hesitate to tweak to your use case.
+    non_label_column_names = [name for name in raw_datasets["train"].column_names if name != "label"]
+    if "sentence1" in non_label_column_names and "sentence2" in non_label_column_names:
+         sentence1_key, sentence2_key = "sentence1", "sentence2"
+    else:
+        if len(non_label_column_names) >= 2:
+            sentence1_key, sentence2_key = non_label_column_names[:2]
+        else:
+            sentence1_key, sentence2_key = non_label_column_names[0], None
+
+# Some models have set the order of the labels to use, so let's make sure we do use it.
+label_to_id = None
+if (
+    dBERT.config.label2id != PretrainedConfig(num_labels=num_labels).label2id
+    and args.task_name is not None
+
+):
+    # Some have all caps in their config, some don't.
+    label_name_to_id = {k.lower(): v for k, v in dBERT.config.label2id.items()}
+    if list(sorted(label_name_to_id.keys())) == list(sorted(label_list)):
+        logger.info(
+            f"The configuration of the model provided the following label correspondence: {label_name_to_id}. "
+            "Using it!"
+        )
+        label_to_id = {i: label_name_to_id[label_list[i]] for i in range(num_labels)}
+    else:
+        logger.warning(
+            "Your model seems to have been trained with labels, but they don't match the dataset: ",
+            f"model labels: {list(sorted(label_name_to_id.keys()))}, dataset labels: {list(sorted(label_list))}."
+            "\nIgnoring the model labels as a result.",
+        )
+elif args.task_name is None and not is_regression:
+    label_to_id = {v: i for i, v in enumerate(label_list)}
+
+if label_to_id is not None:
+    dBERT.config.label2id = label_to_id
+        model.config.id2label = {id: label for label, id in config.label2id.items()}
+    elif args.task_name is not None and not is_regression:
+        model.config.label2id = {l: i for i, l in enumerate(label_list)}
+        model.config.id2label = {id: label for label, id in config.label2id.items()}
+
+    padding = "max_length" if args.pad_to_max_length else False
+
+    def preprocess_function(examples):
+        # Tokenize the texts
+        texts = (
+            (examples[sentence1_key],) if sentence2_key is None else (examples[sentence1_key], examples[sentence2_key])
+        )
+        result = tokenizer(*texts, padding=padding, max_length=args.max_length, truncation=True)
+
+        if "label" in examples:
+            if label_to_id is not None:
+                # Map labels to IDs (not necessary for GLUE tasks)
+                result["labels"] = [label_to_id[l] for l in examples["label"]]
+            else:
+                # In all cases, rename the column to labels because the model will expect that.
+                result["labels"] = examples["label"]
+        return result
+
+    with accelerator.main_process_first():
+        processed_datasets = raw_datasets.map(
+            preprocess_function,
+            batched=True,
+            remove_columns=raw_datasets["train"].column_names,
+            desc="Running tokenizer on dataset",
+        )
+
+    train_dataset = processed_datasets["train"]
+    eval_dataset = processed_datasets["validation_matched" if args.task_name == "mnli" else "validation"]
+
+    # Log a few random samples from the training set:
+    for index in random.sample(range(len(train_dataset)), 3):
+        logger.info(f"Sample {index} of the training set: {train_dataset[index]}.")
+
+    # DataLoaders creation:
+    if args.pad_to_max_length:
+        # If padding was already done ot max length, we use the default data collator that will just convert everything
+        # to tensors.
+        data_collator = default_data_collator
+    else:
+        # Otherwise, `DataCollatorWithPadding` will apply dynamic padding for us (by padding to the maximum length of
+        # the samples passed). When using mixed precision, we add `pad_to_multiple_of=8` to pad all tensors to multiple
+        # of 8s, which will enable the use of Tensor Cores on NVIDIA hardware with compute capability >= 7.5 (Volta).
+        data_collator = DataCollatorWithPadding(tokenizer, pad_to_multiple_of=(8 if accelerator.use_fp16 else None))
+
+    train_dataloader = DataLoader(
+        train_dataset, shuffle=True, collate_fn=data_collator, batch_size=args.per_device_train_batch_size
+    )
+    eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 loaders = \
         {
             'train': torch.utils.data.DataLoader(
@@ -139,10 +257,7 @@ loaders = \
         }
     
 
-# Defined config for dataset preprocessing
 
-dBERT = DistilBertForSequenceClassification.from_pretrained('DistilBERT-Results')
-tokenizer = DistilBertTokenizer.from_pretrained('DistilBERT-Results')
 
 #dBERT = torch.load('DistilBERT-Results/pytorch_model.bin')
 
@@ -202,7 +317,12 @@ def schedule(epoch):
 # use a slightly modified loss function that allows input of model 
 if args.loss == 'matthews':
     criterion = losses.matthews_loss
-
+# use a slightly modified loss function that allows input of model 
+elif args.loss == 'CE':
+    criterion = losses.cross_entropy
+    #criterion = F.cross_entropy
+elif args.loss == 'adv_CE':
+    criterion = losses.adversarial_cross_entropy
 
 """
 # ADAM as opposed to standard SGD for DistilBERT
