@@ -13,6 +13,7 @@ import transformers
 
 from accelerate.logging import get_logger
 from accelerate import Accelerator
+from transformers import DataCollatorWithPadding
 from transformers import (PretrainedConfig, 
                           AutoConfig, 
                           DistilBertTokenizer, 
@@ -52,7 +53,7 @@ parser.add_argument('--max_num_models', type=int, default=20, help='maximum numb
 parser.add_argument('--swag_resume', type=str, default=None, metavar='CKPT',
                     help='checkpoint to restor SWA from (default: None)')
 parser.add_argument('--loss', type=str, default='CE', help='loss to use for training model (default: Cross-entropy)')
-
+parser.add_argument("--pad_to_max_length", action="store_true", help="If passed, pad all samples to `max_length`. Otherwise, dynamic padding is used.",)
 
 parser.add_argument("--model_name_or_path", type=str, help="Path to pretrained model or model identifier from huggingface.co/models.", required=True,)
 parser.add_argument("--max_length", type=int, default=128,
@@ -131,7 +132,7 @@ tokenizer = DistilBertTokenizer.from_pretrained('DistilBERT-Results')
 
 # Preprocessing the datasets
 if args.task_name is not None:
-    sentence1_key, sentence2_key = "glue"
+    sentence1_key, sentence2_key = "sentence", None
 else:
     # Again, we try to have some nice defaults but don't hesitate to tweak to your use case.
     non_label_column_names = [name for name in raw_datasets["train"].column_names if name != "label"]
@@ -183,36 +184,33 @@ def preprocess_function(examples):
     )
     result = tokenizer(*texts, padding=padding, max_length=args.max_length, truncation=True)
 
-    if "label" in examples:
-        if label_to_id is not None:
+#    if "label" in examples:
+#        if label_to_id is not None:
             # Map labels to IDs (not necessary for GLUE tasks)
-            result["labels"] = [label_to_id[l] for l in examples["label"]]
-        else:
+#            result["labels"] = [label_to_id[l] for l in examples["label"]]
+ #       else:
             # In all cases, rename the column to labels because the model will expect that.
-            result["labels"] = examples["label"]
+    result["labels"] = examples["label"]
     return result
 
 
-processed_datasets = raw_datasets.map(
-            preprocess_function,
-            batched=True,
-            remove_columns=raw_datasets["train"].column_names,
-            desc="Running tokenizer on dataset",
-)
+processed_datasets = raw_datasets.map(preprocess_function,batched=True, remove_columns=raw_datasets["train"].column_names, desc="Running tokenizer on dataset",)
 
 processed_datasets.set_format("torch")
+
+collate_fn = DataCollatorWithPadding(tokenizer = tokenizer)
 
 loaders = \
         {
             'train': torch.utils.data.DataLoader(
-                processed_datasets["train"],
+                processed_datasets["train"], collate_fn = collate_fn,
                 batch_size=args.batch_size,
                 shuffle=True and shuffle_train,
                 num_workers=args.num_workers,
                 pin_memory=True
             ),
             'test': torch.utils.data.DataLoader(
-                processed_datasets["test"],
+                processed_datasets["test"], collate_fn = collate_fn,
                 batch_size=args.batch_size,
                 shuffle=False,
                 num_workers=args.num_workers,
@@ -344,7 +342,7 @@ sgd_ens_preds = None
 sgd_targets = None
 n_ensembled = 0.
 
-#import ipdb; ipdb.set_trace();
+import ipdb; ipdb.set_trace();
 
 for epoch in range(start_epoch, args.epochs):
     time_ep = time.time()
