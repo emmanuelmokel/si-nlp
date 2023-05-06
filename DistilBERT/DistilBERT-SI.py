@@ -210,15 +210,14 @@ loaders = \
                 pin_memory=True
             ),
             'test': torch.utils.data.DataLoader(
-                processed_datasets["test"], collate_fn = collate_fn,
+                processed_datasets["validation"], collate_fn = collate_fn,
                 batch_size=args.batch_size,
                 shuffle=False,
                 num_workers=args.num_workers,
                 pin_memory=True
             ),
         }
-    
-
+  
 
 
 #dBERT = torch.load('DistilBERT-Results/pytorch_model.bin')

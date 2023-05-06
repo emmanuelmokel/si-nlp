@@ -147,13 +147,13 @@ def eval(loader, model, criterion, cuda=False, regression=False, verbose=False):
 
             loss = criterion(model, batch)
 
-            loss_sum += loss.item() * batch.inputs_ids.size(0)
+            loss_sum += loss.item() * batch.input_ids.size(0)
            # for key, value in stats.items():
            #     stats_sum[key] += value
 
-            if not regression:
-                pred = output.data.argmax(1, keepdim=True)
-                correct += pred.eq(target.data.view_as(pred)).sum().item()
+            #if not regression:
+            #    pred = output.data.argmax(1, keepdim=True)
+            #    correct += pred.eq(target.data.view_as(pred)).sum().item()
 
     return {
         'loss': loss_sum / num_objects_total,
